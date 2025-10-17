@@ -1,6 +1,7 @@
 import polars as pl
+from typing import List
 
-def pivot_table_on_column(table: pl.DataFrame, column: str, col_for_distribution: str) -> pl.DataFrame:
+def pivot_table_on_column(table: pl.DataFrame, column: str, col_for_distribution: str) -> tuple[pl.DataFrame, List[str]]:
     """
     Pivot a Polars DataFrame to a wide format based on a categorical column.
 
@@ -35,7 +36,7 @@ def pivot_table_on_column(table: pl.DataFrame, column: str, col_for_distribution
     (shape: (max_len, <=10), ['Technology', 'Health', ..., 'Comedy'])
     """
 
-    col_values = table[column].unique().limit(15).to_list()
+    col_values = table[column].unique().limit(25).to_list()
 
     data_by_col = {
         col: table.filter(pl.col(column) == col)[col_for_distribution].to_list()
@@ -47,7 +48,7 @@ def pivot_table_on_column(table: pl.DataFrame, column: str, col_for_distribution
 
     # Pad all lists to max length with None
     padded_data = {
-        col: values + [None] * (max_len - len(values))
+        str(col): values + [None] * (max_len - len(values))
         for col, values in data_by_col.items()
     }
 

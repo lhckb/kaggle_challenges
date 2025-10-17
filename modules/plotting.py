@@ -2,6 +2,7 @@ import polars as pl
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import List
+from sklearn.metrics import precision_recall_curve, roc_curve, auc
 
 plt.rcParams["figure.dpi"] = 150
 plt.rcParams["boxplot.medianprops.color"] = "black"
@@ -84,7 +85,7 @@ def multiple_boxplots(data: pl.DataFrame, columns: List[str], title: str = "Titl
         ax.spines[side].set_visible(False)
     ax.grid(axis="y", linestyle=":", linewidth=0.8, alpha=0.7, zorder=0)
 
-    box_data = [data[col].drop_nulls().to_list() for col in columns]
+    box_data = [data[str(col)].drop_nulls().to_list() for col in columns]
     
     _ = ax.boxplot(
         box_data,
@@ -104,7 +105,7 @@ def multiple_boxplots(data: pl.DataFrame, columns: List[str], title: str = "Titl
     plt.show()
 
 
-def multiple_barplot(data: pl.DataFrame, columns: List[str], title: str = "Title"):
+def multiple_barplot(data: pl.DataFrame, columns: List[str], title: str = "Title", xtick_labels = [], metric = "mean"):
     """
     Plot a bar chart with the mean of each specified numerical column in a Polars DataFrame.
 
@@ -117,7 +118,11 @@ def multiple_barplot(data: pl.DataFrame, columns: List[str], title: str = "Title
     title : str, optional
         Title of the plot.
     """
-    means = [data[col].drop_nulls().mean() for col in columns]
+    means = []
+    if metric == "mean":
+        means = [data[str(col)].drop_nulls().mean() for col in columns]
+    elif metric == "median":
+        means = [data[str(col)].drop_nulls().median() for col in columns]
 
     fig, ax = plt.subplots(figsize=(max(10, len(columns) * 1.5), 6))
 
@@ -139,7 +144,8 @@ def multiple_barplot(data: pl.DataFrame, columns: List[str], title: str = "Title
         )
 
     ax.set_title(title, fontsize=12, fontweight="bold", pad=10, loc="left")
-    ax.set_xticklabels(columns)
+    if len(xtick_labels) > 0:
+        ax.set_xticklabels(xtick_labels)
     ax.set_yticklabels([])
 
     plt.tight_layout()
@@ -197,4 +203,44 @@ def plot_training_loss_history(history, loss = "Loss"):
     plt.legend()
     plt.title('Training and Validation Loss')
     plt.grid(True)
+    plt.show()
+
+
+def compute_and_plot_pr_roc_auc(y_true, y_probas):
+    # ROC Curve
+    fpr, tpr, _ = roc_curve(y_true, y_probas)
+    roc_auc = auc(fpr, tpr)
+
+    # Precision-Recall Curve
+    precision, recall, _ = precision_recall_curve(y_true, y_probas)
+    pr_auc = auc(recall, precision)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    # ROC
+    ax = axes[0]
+    ax.plot(fpr, tpr, label=f"AUC = {roc_auc:.2f}")
+    ax.plot([0, 1], [0, 1], "k--")
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
+    ax.set_title("ROC Curve")
+    ax.legend()
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.3)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_aspect('equal', adjustable='box')
+
+    # Precision-Recall
+    ax = axes[1]
+    ax.plot(recall, precision, label=f"AUC = {pr_auc:.2f}")
+    ax.set_xlabel("Recall")
+    ax.set_ylabel("Precision")
+    ax.set_title("Precision-Recall Curve")
+    ax.legend()
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.3)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_aspect('equal', adjustable='box')
+
+    plt.tight_layout()
     plt.show()
